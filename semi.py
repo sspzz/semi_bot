@@ -91,20 +91,21 @@ class SuperMeta:
     def load():
         with open('resources/meta/supers.json', 'r') as file:
             semis = []
+            all_traits = []
             semis_json = json.load(file)
             for semi_id in semis_json.keys():
                 semi_json = semis_json[semi_id]
                 semi = json.loads(json.dumps(semi_json), object_hook=lambda d: SimpleNamespace(**d))
                 semis.append(semi)
-            num_semis = len(semis)
-            
+                all_traits.extend(list(map(lambda a: "{}: {}".format(a.trait_type, a.value), semi.attributes)))
+            num_semis = len(semis)            
             # Not very optimized, but calculate rarities for all traits, then update the original metadata
-            flattened = sum(list(map(lambda s: list(map(lambda a: "{}: {}".format(a.trait_type, a.value), s.attributes)), semis)), [])
-            res = {}
-            for trait in flattened:
-                if trait not in res:
-                    res[trait] = flattened.count(trait) / num_semis            
-            
+            # flattened = sum(list(map(lambda s: list(map(lambda a: "{}: {}".format(a.trait_type, a.value), s.attributes)), semis)), [])
+            trait_rarities = {}
+            for trait in all_traits:
+                if trait not in trait_rarities:
+                    trait_rarities[trait] = all_traits.count(trait) / num_semis            
+            # Then update the meta data for each semi with the rarity for it's traits
             def rarity_name(rarity, total):
                 if rarity < 2 / total:
                     return "Artifact"
@@ -120,7 +121,7 @@ class SuperMeta:
                     return "Common"
             for semi in semis:
                 for attr in semi.attributes:
-                    attr.rarity = res["{}: {}".format(attr.trait_type, attr.value)]
+                    attr.rarity = trait_rarities["{}: {}".format(attr.trait_type, attr.value)]
                     attr.rarity_name = rarity_name(attr.rarity, num_semis)
 
             return semis

@@ -73,14 +73,14 @@ def can_be_used_in(channel_id):
 #
 # Commands
 #
-@bot.command(name="stats", aliases=["semi", "s"])
+@bot.command(name="semi", aliases=["stats", "s"])
 async def stats(ctx, token_id):
 	logger.info("SEMI")
 	try:
 		semi = SuperFactory.get(token_id)
 		fields = []
 		for trait in semi.meta.attributes:
-			fields.append(("{} {}".format(trait.rarity_name, trait.trait_type.title()), "{} ({}%)".format(trait.value, round(trait.rarity*100, 3))))
+			fields.append(("{} {}".format(trait.rarity_name, trait.trait_type.title()), "{} ({}%)".format(trait.value, round(trait.rarity*100, 2))))
 		await DiscordUtils.embed_fields(ctx, semi.name, fields, image=semi.pfp)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))	
