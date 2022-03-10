@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import urllib.request
 import imagetools
 import zipfile
+import random
 
 class SemiSuper(object):
     def __init__(self, token_id, artwork_root, meta):
@@ -16,10 +17,10 @@ class SemiSuper(object):
         self.name = meta.name
         self.is_villain = "Villain" in meta.name
 
-    async def make_catchphrase(self, phrase):
+    def make_catchphrase(self, phrase):
         imagetools.catchphrase(self, phrase).save(self.catchphrase)
 
-    async def make_vs(self, semi_opponent, fight_round=None):
+    def make_vs(self, semi_opponent, fight_round=None):
         imagetools.vs(self, semi_opponent, fight_round).save(self.vs)
 
     def meta_trait(self, trait_type):
@@ -65,6 +66,7 @@ class SemiSuper(object):
     def background_color(self):
         bg_name = meta_trait("background")
 
+
     @property
     def traits(self):
         return [
@@ -94,7 +96,35 @@ class SuperMeta:
                 semi_json = semis_json[semi_id]
                 semi = json.loads(json.dumps(semi_json), object_hook=lambda d: SimpleNamespace(**d))
                 semis.append(semi)
+            num_semis = len(semis)
+            
+            # Not very optimized, but calculate rarities for all traits, then update the original metadata
+            flattened = sum(list(map(lambda s: list(map(lambda a: "{}: {}".format(a.trait_type, a.value), s.attributes)), semis)), [])
+            res = {}
+            for trait in flattened:
+                if trait not in res:
+                    res[trait] = flattened.count(trait) / num_semis            
+            
+            def rarity_name(rarity, total):
+                if rarity < 2 / total:
+                    return "Artifact"
+                elif rarity <= 14 / total:
+                    return "Legendary"
+                elif rarity <= 42 / total:
+                    return "Epic"
+                elif rarity <= 98 / total:
+                    return "Rare"
+                elif rarity <= 1110 / total:
+                    return "Uncommon"
+                else:
+                    return "Common"
+            for semi in semis:
+                for attr in semi.attributes:
+                    attr.rarity = res["{}: {}".format(attr.trait_type, attr.value)]
+                    attr.rarity_name = rarity_name(attr.rarity, num_semis)
+
             return semis
+
 
 class SuperFactory:
     semis_meta = SuperMeta.load()
@@ -119,7 +149,6 @@ class SuperFactory:
             zip_ref = zipfile.ZipFile(zip_file, 'r')
             zip_ref.extractall(semi.path)
             os.remove(zip_file)    
-    
 
         # Download and generate content
         if not cache or not os.path.isfile(semi.path):
@@ -145,7 +174,10 @@ class SuperFactory:
 #
 async def gen(token_ids):
     for token_id in token_ids:
-        SuperFactory.get(token_id, cache=False)
+        semi = SuperFactory.get(token_id, cache=False)
+        semi.make_catchphrase("This is a test of the emergency broadcasting system!")
+        semi2 = SuperFactory.get(random.randint(0, 5554), cache=False)
+        semi.make_vs(semi2)
 
 async def main(argv):
     if len(argv) == 0:
@@ -157,6 +189,8 @@ async def main(argv):
         await gen(argv)
             
 if __name__ == "__main__":
+    print(SuperFactory.semis_meta[5340])
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     result = loop.run_until_complete(main(sys.argv[1:]))
+

@@ -1,5 +1,5 @@
 import config
-from semi import SuperFactory
+from semi import SuperFactory, SuperMeta
 import json
 import discord
 from discord.ext import commands
@@ -33,7 +33,8 @@ class DiscordUtils:
 		await ctx.send(file=file, embed=embed)
 
 	@staticmethod
-	async def embed_fields(ctx, title, fields, inline=True, thumbnail=None, url=None):
+	async def embed_fields(ctx, title, fields, inline=True, thumbnail=None, url=None, image=None):
+		file = None
 		embed = discord.Embed(title=title)
 		if thumbnail is not None:
 			embed.set_thumbnail(url=thumbnail)
@@ -41,7 +42,10 @@ class DiscordUtils:
 			embed.add_field(name=field[0], value=field[1], inline=inline)
 		if url is not None:
 			embed.url = url
-		await ctx.send(embed=embed)
+		if image is not None:
+			file = discord.File(image, filename="semi.png")
+			embed.set_image(url="attachment://semi.png")
+		await ctx.send(file=file, embed=embed)
 
 
 #
@@ -69,6 +73,19 @@ def can_be_used_in(channel_id):
 #
 # Commands
 #
+@bot.command(name="stats", aliases=["semi", "s"])
+async def stats(ctx, token_id):
+	logger.info("SEMI")
+	try:
+		semi = SuperFactory.get(token_id)
+		fields = []
+		for trait in semi.meta.attributes:
+			fields.append(("{} {}".format(trait.rarity_name, trait.trait_type.title()), "{} ({}%)".format(trait.value, round(trait.rarity*100, 3))))
+		await DiscordUtils.embed_fields(ctx, semi.name, fields, image=semi.pfp)	
+	except:
+		await ctx.send("Could not load SemiSuper {}".format(token_id))	
+
+
 @bot.command(name="pfp", aliases=["pic"])
 async def pic(ctx, *args):
 	logger.info("PFP")
@@ -182,7 +199,7 @@ async def vs(ctx, *args):
 	try:
 		semi1 = SuperFactory.get(token_id)
 		semi2 = SuperFactory.get(token_id2)
-		await semi1.make_vs(semi2, fight_round)
+		semi1.make_vs(semi2, fight_round)
 		await DiscordUtils.embed_image(ctx, "{} vs. {}".format(semi1.name, semi2.name), semi1.vs, "semi.png")
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
@@ -192,7 +209,7 @@ async def catchphrase(ctx, token_id, *args):
 	logger.info("CATCHPHRASE")
 	try:
 		semi = SuperFactory.get(token_id)
-		await semi.make_catchphrase(" ".join(args))
+		semi.make_catchphrase(" ".join(args))
 		await DiscordUtils.embed_image(ctx, semi.name, semi.catchphrase, "semi.png")	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
