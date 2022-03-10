@@ -9,6 +9,7 @@ A simple Discord Bot which will, among other things, download and display artwor
 
 - `!gm` - Semi GM!
 - `!gn` - Semi GN!
+- `!semi`- Semi with traits and rarites
 - `!pfp` - Original artwork
 - `!tpfp` - Original artwork on transparent background
 - `!head` - Just the SemiSuper's head
@@ -26,6 +27,23 @@ A simple Discord Bot which will, among other things, download and display artwor
 
 ## 🖥 CLI
 
-You can also use this as a stand-alone tool for downloading and generating artwork; Either supply a list of token IDs as arguments, or run `--all` to generate everything.
+You can use this as a stand-alone tool for downloading and generating artwork; Either supply a list of token IDs as arguments, or run `--all` to generate everything.
 
 For example `$ python3 semi.py 50` will download and generate the artwork for SemiSuper numer 50, aka. Villain #50.
+
+## 📡 REST API
+
+You can run this as a web server providing a RESTful API with the same functionality as the bot itself, just run `$ python3 semi_api.py`.
+
+Onece running, the exposed endpoints are:
+
+- `http://127.0.0.1:5000/semi?tokenId=123`
+- `http://127.0.0.1:5000/pfp?tokenId=123`
+- `http://127.0.0.1:5000/tpfp?tokenId=123`
+- `http://127.0.0.1:5000/head?tokenId=123`
+- `http://127.0.0.1:5000/thead?tokenId=123`
+- `http://127.0.0.1:5000/gm?tokenId=123`
+- `http://127.0.0.1:5000/gn?tokenId=123`
+- `http://127.0.0.1:5000/say?tokenId=123&quote=Semi%20hilaroius%20catchphrase`
+- `http://127.0.0.1:5000/vs?tokenId=123&tokenId2=321`
+
