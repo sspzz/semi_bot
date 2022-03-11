@@ -78,7 +78,7 @@ async def stats(ctx, token_id):
 	logger.info("SEMI")
 	try:
 		semi = SuperFactory.get(token_id)
-		fields = list(map(lambda a: ("{} {}".format(a.rarity_name, a.trait_type.title()), "{} ({}%)".format(a.value, round(a.rarity*100, 2))), semi.meta.attributes))
+		fields = list(map(lambda a: ("{} {}".format(a.rarity_category, a.trait_type.title()), "{} ({}%)".format(a.value, round(a.rarity*100, 2))), semi.meta.attributes))
 		await DiscordUtils.embed_fields(ctx, semi.name, fields, image=semi.pfp)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))	
