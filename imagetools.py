@@ -194,19 +194,16 @@ def bg_wide(semi):
     bg_trait = semi.meta_trait("background")
     if "Skulls" in bg_trait or "Burst" in bg_trait:
         resource_name = "resources/assets/bg_{}.png".format(bg_trait.replace(" Background", "").replace(" ", "_").lower())
-        return Image.open(resource_name).convert("RGBA")
+        return Image.open(resource_name)
     else:
-        return Image.open(semi.traits[-1]).resize((2400, 1080)).convert("RGBA")
+        return Image.open(semi.traits[-1]).resize((2400, 1080))
 
 def pfp(semi, background=True):
     root = Image.open(semi.traits[-1]) if background else Image.new("RGBA", (1080, 1080), (255,255,255,0))
     for layer in reversed(semi.traits[:-1]):
         if os.path.isfile(layer):
             img = Image.open(layer).convert("RGBA")
-            if root is None:
-                root = img
-            else:
-                root.paste(img, (0,0), img)
+            root.paste(img, (0,0), img)
     return root
 
 def head(semi, background=True):
@@ -214,10 +211,7 @@ def head(semi, background=True):
     for layer in reversed([s for i,s in enumerate(semi.traits) if i != 1][:-4]):
         if os.path.isfile(layer):
             img = Image.open(layer).convert("RGBA")
-            if root is None:
-                root = img
-            else:
-                root.paste(img, (0,50), img)
+            root.paste(img, (0,50), img)
     return root
 
 def gm(semi, gn=False):
@@ -247,7 +241,6 @@ def catchphrase(semi, phrase):
     return background
 
 def vs(semi1, semi2, fight_round=None):
-    root = Image.new("RGBA", (2400, 1080), (255,255,255,0))
     # Starburst in the middle, allow for specifying "fight", semi" or final", otherwise go with "fight"
     starburst_file = "resources/assets/fn_fight_starburst.png"
     if isinstance(fight_round, str):
@@ -263,8 +256,8 @@ def vs(semi1, semi2, fight_round=None):
     if random.randint(0, 1) == 0:
         bg_mask = bg_mask.transpose(Image.FLIP_TOP_BOTTOM)
     # Backgrounds and PFPs
-    background1 = bg_wide(semi1)
-    background2 = bg_wide(semi2)
+    background1 = bg_wide(semi1).convert("RGBA")
+    background2 = bg_wide(semi2).convert("RGBA")
     pfp1 = pfp(semi1, background=False)
     pfp2 = pfp(semi2, background=False)
     # Make sure to flip semis depending on orientation (hero/villain)
@@ -278,8 +271,9 @@ def vs(semi1, semi2, fight_round=None):
     # Put it all together
     pfp1_coords = (0,0)
     pfp2_coords = (1320,0)
+    root = Image.new("RGB", (2400, 1080), (255,255,255))
     root.paste(background2, (0,0), background2)
-    root.paste(background1, (0,0), bg_mask) # Remember to mask 
+    root.paste(background1, (0,0), bg_mask) # Remember to mask
     root.paste(starburst, (0,0), starburst)
     root.paste(pfp1, pfp1_coords, pfp1)
     root.paste(pfp2, pfp2_coords, pfp2)
