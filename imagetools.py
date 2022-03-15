@@ -152,13 +152,12 @@ def desaturate(img):
     img = enhancer.enhance(0.46)
     return img
 
-def gif(frames, target, background=None, overlay=None, dim=(100, 100), transparent=False, duration=600):
+def gif(target, frames, background=None, overlay=None, dim=(2400, 1080), transparent=False, duration=750):
     images = []
-    icc = None
-    for image in frames:
-        image = image.convert('RGBA', dither=None)
+    for frame in frames:
+        image = frame.convert('RGBA', dither=None)
         if background is not None:
-            bg = Image.open(background).convert('RGBA', dither=None)
+            bg = background.convert('RGBA', dither=None)
             bg.paste(image, (-4, 3), image)
         else:
             bg = image
@@ -190,42 +189,38 @@ def all_png(path):
 
 ###########################################################################################
 
+def pfp(semi, trait_types, xy=(0,0)):
+    bg = "background" in trait_types
+    traits = semi.get_traits_assets(include_trait_types=trait_types)
+    root = Image.open(traits[0]) if bg else Image.new("RGBA", (1080, 1080), (255,255,255,0))
+    for layer in traits[0 if not bg else 1:]:
+        img = Image.open(layer).convert("RGBA")
+        if root is None:
+            root = img
+        else:
+            root.paste(img, xy, img)
+    return root
+
 def bg_wide(semi):
     bg_trait = semi.meta_trait("background")
     if "Skulls" in bg_trait or "Burst" in bg_trait:
         resource_name = "resources/assets/bg_{}.png".format(bg_trait.replace(" Background", "").replace(" ", "_").lower())
         return Image.open(resource_name)
     else:
-        return Image.open(semi.traits[-1]).resize((2400, 1080))
+        return Image.open(semi.get_traits_assets()[0]).resize((2400, 1080))
 
-def pfp(semi, background=True):
-    root = Image.open(semi.traits[-1]) if background else Image.new("RGBA", (1080, 1080), (255,255,255,0))
-    for layer in reversed(semi.traits[:-1]):
-        if os.path.isfile(layer):
-            img = Image.open(layer).convert("RGBA")
-            root.paste(img, (0,0), img)
-    return root
-
-def head(semi, background=True):
-    root = Image.open(semi.traits[-1]) if background else Image.new("RGBA", (1080, 1080), (255,255,255,0))
-    for layer in reversed([s for i,s in enumerate(semi.traits) if i != 1][:-4]):
-        if os.path.isfile(layer):
-            img = Image.open(layer).convert("RGBA")
-            root.paste(img, (0,50), img)
-    return root
-
-def gm(semi, gn=False):
+def gm(semi, trait_types, gn=False):
     background = bg_wide(semi)
-    semi_pfp = pfp(semi, background=False)
+    semi_pfp = pfp(semi, trait_types=trait_types).convert("RGBA")
     gm = Image.open("resources/assets/{}!_{}.png".format("GN" if gn else "GM", "villain" if semi.is_villain else "hero"))
     pfp_coords = (1320,0) if semi.is_villain else (0,0)
     background.paste(semi_pfp, pfp_coords, semi_pfp)
     background.paste(gm, (0,0), gm)
     return background
 
-def catchphrase(semi, phrase):
+def catchphrase(semi, trait_types, phrase):
     background = bg_wide(semi)
-    semi_pfp = pfp(semi, background=False)
+    semi_pfp = pfp(semi, trait_types=trait_types).convert("RGBA")
     ss_logo = Image.open("resources/assets/semisupers_burst_{}.png".format("villain" if semi.is_villain else "hero"))
     speech_bubble = Image.open("resources/assets/speech_bubble_{}.png".format("villain" if semi.is_villain else "hero"))
     pfp_coords = (1320,0) if semi.is_villain else (0,0)
@@ -240,7 +235,7 @@ def catchphrase(semi, phrase):
     background.paste(img_text.image, (390, 140) if semi.is_villain else (1160, 140), img_text.image)
     return background
 
-def vs(semi1, semi2, fight_round=None):
+def vs(semi1, semi2, trait_types, fight_round=None):
     # Starburst in the middle, allow for specifying "fight", semi" or final", otherwise go with "fight"
     starburst_file = "resources/assets/fn_fight_starburst.png"
     if isinstance(fight_round, str):
@@ -251,15 +246,11 @@ def vs(semi1, semi2, fight_round=None):
         elif fight_round == "final":
             starburst_file = "resources/assets/fn_final_starburst.png"
     starburst = Image.open(starburst_file)
-    # Mask for overlaying backgrounds, randomize the angle of the cut with a coin toss
-    bg_mask = Image.open("resources/assets/bg_mask.png")
-    if random.randint(0, 1) == 0:
-        bg_mask = bg_mask.transpose(Image.FLIP_TOP_BOTTOM)
     # Backgrounds and PFPs
     background1 = bg_wide(semi1).convert("RGBA")
     background2 = bg_wide(semi2).convert("RGBA")
-    pfp1 = pfp(semi1, background=False)
-    pfp2 = pfp(semi2, background=False)
+    pfp1 = pfp(semi1, trait_types=trait_types).convert("RGBA")
+    pfp2 = pfp(semi2, trait_types=trait_types).convert("RGBA")
     # Make sure to flip semis depending on orientation (hero/villain)
     # and what side they end up on (left/right)
     if semi1.is_villain:
@@ -273,6 +264,10 @@ def vs(semi1, semi2, fight_round=None):
     pfp2_coords = (1320,0)
     root = Image.new("RGB", (2400, 1080), (255,255,255))
     root.paste(background2, (0,0), background2)
+    # Mask for overlaying backgrounds, randomize the angle of the cut with a coin toss
+    bg_mask = Image.open("resources/assets/bg_mask.png")
+    if random.randint(0, 1) == 0:
+        bg_mask = bg_mask.transpose(Image.FLIP_TOP_BOTTOM)
     root.paste(background1, (0,0), bg_mask) # Remember to mask
     root.paste(starburst, (0,0), starburst)
     root.paste(pfp1, pfp1_coords, pfp1)
