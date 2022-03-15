@@ -200,6 +200,16 @@ async def vs(ctx, *args):
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
+@bot.command(name="gvs", aliases=["vsgif"])
+async def gvs(ctx, *args):
+	logger.info("VS GIF")
+	try:
+		gif = SuperFactory.vs_gif(args[0])
+		await DiscordUtils.embed_image(ctx, "Fight!", gif, "semi.gif")
+	except:
+		await ctx.send("Could not load SemiSuper {}".format(token_id))
+
+
 @bot.command(name="say", aliases=["catchphrase", "phrase"])
 async def catchphrase(ctx, token_id, *args):
 	logger.info("CATCHPHRASE")
