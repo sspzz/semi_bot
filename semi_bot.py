@@ -78,10 +78,12 @@ async def stats(ctx, token_id):
 	logger.info("SEMI")
 	try:
 		semi = SuperFactory.get(token_id)
-		fields = list(map(lambda a: ("{} {}".format(a.rarity_category, a.trait_type.title()), "{} ({}%)".format(a.value, round(a.rarity*100, 2))), semi.meta.attributes))
-		await DiscordUtils.embed_fields(ctx, semi.name, fields, image=semi.pfp)	
+		traits = sorted(semi.meta.attributes, key=lambda t: t.trait_type)
+		def field_from_trait(trait):
+			return ("{} {}".format(trait.rarity_category, trait.trait_type.title()), "{} ({}%)".format(trait.value, round(trait.rarity*100, 2)))
+		await DiscordUtils.embed_fields(ctx, semi.name, list(map(lambda t: field_from_trait(t), traits)), image=semi.pfp, url=semi.opensea_url)
 	except:
-		await ctx.send("Could not load SemiSuper {}".format(token_id))	
+		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
 @bot.command(name="pfp", aliases=["pic"])
 async def pic(ctx, *args):
@@ -94,7 +96,7 @@ async def pic(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.pfp, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.pfp, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -109,7 +111,7 @@ async def pic_nobg(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.pfp_nobg, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.pfp_nobg, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -124,7 +126,7 @@ async def pic(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.head, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.head, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -139,7 +141,7 @@ async def pic_nobg(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.head_nobg, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.head_nobg, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -154,7 +156,7 @@ async def gm(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.gm, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.gm, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -169,7 +171,7 @@ async def gn(ctx, *args):
 		return
 	try:
 		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.gn, "semi.png")	
+		await DiscordUtils.embed_image(ctx, semi.name, semi.gn, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -193,30 +195,30 @@ async def vs(ctx, *args):
 	else:
 		return
 	try:
-		semi1 = SuperFactory.get(token_id)
-		semi2 = SuperFactory.get(token_id2)
-		semi1.make_vs(semi2, fight_round)
+		semi1, semi2 = SuperFactory.vs(token_id, token_id2, fight_round)
 		await DiscordUtils.embed_image(ctx, "{} vs. {}".format(semi1.name, semi2.name), semi1.vs, "semi.png")
-	except:
+	except Exception as e:
+		logger.error(e.message)
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
-@bot.command(name="gvs", aliases=["vsgif"])
+@bot.command(name="vsg", aliases=["vsgif"])
 async def gvs(ctx, *args):
 	logger.info("VS GIF")
 	try:
-		gif = SuperFactory.vs_gif(args[0])
+		gif = await SuperFactory.vs_gif(args[0] if len(args) > 0 else None)
 		await DiscordUtils.embed_image(ctx, "Fight!", gif, "semi.gif")
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
 
 @bot.command(name="say", aliases=["catchphrase", "phrase"])
-async def catchphrase(ctx, token_id, *args):
+async def catchphrase(ctx, *args):
 	logger.info("CATCHPHRASE")
 	try:
-		semi = SuperFactory.get(token_id)
-		semi.make_catchphrase(" ".join(args))
-		await DiscordUtils.embed_image(ctx, semi.name, semi.catchphrase, "semi.png")	
+		has_token_id = args[0].isnumeric()
+		token_id = args[0] if has_token_id else random.randint(0, 5554)
+		semi = SuperFactory.catchphrase(token_id, " ".join(args[1 if has_token_id else 0:]))
+		await DiscordUtils.embed_image(ctx, semi.name, semi.catchphrase, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 

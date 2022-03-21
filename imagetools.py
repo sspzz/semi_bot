@@ -2,7 +2,7 @@ import os
 import random
 from PIL import Image, ImageSequence, ImageEnhance, ImageDraw, ImageFont, ImageDraw
 from itertools import product
-
+from io import BytesIO
 
 class ImageText(object):
     def __init__(self, filename_or_size_or_Image, mode='RGBA', background=(0, 0, 0, 0),
@@ -171,6 +171,29 @@ def gif(target, frames, background=None, overlay=None, dim=(2400, 1080), transpa
         images[0].save(target, save_all=True, append_images=images[1:], optimize=False, quality=100, duration=duration, loop=0, transparency=255, disposal=2)
     else:
         images[0].save(target, save_all=True, append_images=images[1:], optimize=False, quality=100, duration=duration, loop=0)
+
+def gifio(frames, background=None, overlay=None, dim=(2400, 1080), transparent=False, duration=750):
+    images = []
+    for frame in frames:
+        image = frame.convert('RGBA', dither=None)
+        if background is not None:
+            bg = background.convert('RGBA', dither=None)
+            bg.paste(image, (-4, 3), image)
+        else:
+            bg = image
+        if overlay is not None:
+            fg = Image.open(overlay).convert('RGBA', dither=None)
+            bg.paste(fg, (0, 0), fg)
+        final_image = bg if not None else image
+        final_image = final_image.resize(dim) #, Image.NEAREST)
+        images.append(final_image)
+    target = BytesIO()
+    if transparent:
+        images[0].save(target, format='GIF', save_all=True, append_images=images[1:], optimize=False, quality=100, duration=duration, loop=0, transparency=255, disposal=2)
+    else:
+        images[0].save(target, format='GIF', save_all=True, append_images=images[1:], optimize=False, quality=100, duration=duration, loop=0)
+    target.seek(0)
+    return target
 
 def overlay(images, scale=1):
     bg = None

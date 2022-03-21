@@ -273,23 +273,16 @@ class SemiSuper(object):
         self.name = meta.name
         self.is_villain = "Villain" in meta.name
 
-    def make_pfp_custom(self, trait_types):
-        custom = imagetools.pfp(self, trait_types=trait_types)
-        if custom is not None:
-            custom.save(self.pfp_custom)
-
-    def make_catchphrase(self, phrase):
-        imagetools.catchphrase(self, SuperMeta.trait_types_nobg, phrase).save(self.catchphrase)
-
-    def make_vs(self, semi_opponent, fight_round=None):
-        imagetools.vs(self, semi_opponent, SuperMeta.trait_types_nobg, fight_round).save(self.vs)
-
     def meta_trait(self, trait_type):
         try:
             attr = next(filter(lambda a: a.trait_type == trait_type, self.meta.attributes))
             return attr.value if attr is not None else None
         except:
             return None
+
+    @property
+    def opensea_url(self):
+        return "https://opensea.io/assets/0xac87febdf7ef7d5f930497cafab9c25d35b932f9/{}".format(self.token_id)
 
     @property
     def path(self):
@@ -398,19 +391,34 @@ class SuperFactory:
         return semi
 
     @staticmethod
-    def vs_gif(token_id=None):
+    def pfp_custom(token_id, trait_types):
+        semi = SuperFactory.get(token_id)
+        custom = imagetools.pfp(semi, trait_types=trait_types).save(semi.pfp_custom)
+        return semi
+
+    @staticmethod
+    def catchphrase(token_id, phrase):
+        semi = SuperFactory.get(token_id)
+        imagetools.catchphrase(semi, SuperMeta.trait_types_nobg, phrase).save(semi.catchphrase)
+        return semi
+
+    @staticmethod
+    def vs(token_id, token_id2, fight_round=None):
+        semi = SuperFactory.get(token_id)
+        semi_opponent = SuperFactory.get(token_id2)
+        imagetools.vs(semi, semi_opponent, SuperMeta.trait_types_nobg, fight_round).save(semi.vs)
+        return (semi, semi_opponent)
+
+    @staticmethod
+    async def vs_gif(token_id=None):
         if token_id is not None:
             semi = SuperFactory.get(token_id)
             opps = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
-            target = "{}/artwork/{}-vs.gif".format(os.getcwd())
-            imagetools.gif(target, [imagetools.vs(semi, opp, SuperMeta.trait_types_nobg) for opp in opps])
-            return target
+            return imagetools.gifio([imagetools.vs(semi, opp, SuperMeta.trait_types_nobg) for opp in opps])
         else:
             opps1 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
             opps2 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
-            target = "{}/artwork/random-vs.gif".format(os.getcwd())
-            imagetools.gif(target, [imagetools.vs(opps[0], opps[1], SuperMeta.trait_types_nobg) for opps in list(zip(opps1, opps2))])
-            return target
+            return imagetools.gifio([imagetools.vs(opps[0], opps[1], SuperMeta.trait_types_nobg) for opps in list(zip(opps1, opps2))])
 
 #
 # CLI
@@ -418,10 +426,9 @@ class SuperFactory:
 async def gen(token_ids):
     for token_id in token_ids:
         semi = SuperFactory.get(token_id, cache=False)
-        semi.make_catchphrase("This is not a test of the emergency broadcasting system, this is the real deal!")
-        semi.make_pfp_custom(trait_types=["head"])
-        semi2 = SuperFactory.get(random.randint(0, 5554), cache=False)
-        semi.make_vs(semi2)
+        SuperFactory.catchphrase(token_id, "This is not a test of the emergency broadcasting system, this is the real deal!")
+        SuperFactory.pfp_custom(token_id, trait_types=["head", "torso"])
+        SuperFactory.vs(token_id, random.randint(0, 5554))
 
 async def main(argv):
     if len(argv) == 0:
