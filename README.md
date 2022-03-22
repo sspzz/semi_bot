@@ -48,5 +48,5 @@ Onece running, the exposed endpoints are:
 - `http://127.0.0.1:5000/gn?tokenId=123`
 - `http://127.0.0.1:5000/say?tokenId=123&quote=Semi%20hilaroius%20catchphrase`
 - `http://127.0.0.1:5000/vs?tokenId=123&tokenId2=321`
-- - `http://127.0.0.1:5000/vsg?tokenId=123`
+- `http://127.0.0.1:5000/vsg?tokenId=123`
 
