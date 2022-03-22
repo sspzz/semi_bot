@@ -212,12 +212,13 @@ async def gvs(ctx, *args):
 
 
 @bot.command(name="say", aliases=["catchphrase", "phrase"])
-async def catchphrase(ctx, *args):
+async def catchphrase(ctx, *, msg):
 	logger.info("CATCHPHRASE")
 	try:
-		has_token_id = args[0].isnumeric()
-		token_id = args[0] if has_token_id else random.randint(0, 5554)
-		semi = SuperFactory.catchphrase(token_id, " ".join(args[1 if has_token_id else 0:]))
+		words = msg.split()
+		has_token_id = words[0].isnumeric()
+		token_id = words[0] if has_token_id else random.randint(0, 5554)
+		semi = SuperFactory.catchphrase(token_id, " ".join(words[1 if has_token_id else 0:]))
 		await DiscordUtils.embed_image(ctx, semi.name, semi.catchphrase, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
