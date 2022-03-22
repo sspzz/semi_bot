@@ -209,6 +209,11 @@ def overlay(images, scale=1):
 def all_png(path):
     return [f for f in sorted(os.listdir(path)) if f.endswith('.png')]
 
+def to_png(img):
+    byteImgIO = BytesIO()
+    img.save(byteImgIO, "PNG")
+    byteImgIO.seek(0)
+    return byteImgIO
 
 ###########################################################################################
 
@@ -289,4 +294,3 @@ def vs(semi1, semi2, trait_types, fight_round=None):
     root.paste(pfp1, (0,0), pfp1)
     root.paste(pfp2, (1320,0), pfp2)
     return root
-

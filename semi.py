@@ -293,14 +293,6 @@ class SemiSuper(object):
         return "{}/{}.png".format(self.path, self.token_id)
     
     @property
-    def pfp_gif(self):
-        return "{}/{}.gif".format(self.path, self.token_id)
-
-    @property
-    def pfp_custom(self):
-        return "{}/{}-custom.png".format(self.path, self.token_id)
-
-    @property
     def pfp_nobg(self):
         return "{}/{}-nobg.png".format(self.path, self.token_id)
 
@@ -319,14 +311,6 @@ class SemiSuper(object):
     @property
     def gn(self):
         return "{}/{}-gn.png".format(self.path, self.token_id)
-
-    @property
-    def vs(self):
-        return "{}/{}-vs.png".format(self.path, self.token_id)
-
-    @property
-    def catchphrase(self):
-        return "{}/{}-catchphrase.png".format(self.path, self.token_id)
 
     def get_traits_assets(self, include_trait_types=SuperMeta.trait_types):
         semi_traits_ordered = SuperMeta.trait_types.copy()
@@ -391,34 +375,35 @@ class SuperFactory:
         return semi
 
     @staticmethod
-    def pfp_custom(token_id, trait_types):
+    async def pfp_custom(token_id, trait_types):
         semi = SuperFactory.get(token_id)
-        custom = imagetools.pfp(semi, trait_types=trait_types).save(semi.pfp_custom)
-        return semi
+        return (semi, imagetools.to_png(imagetools.pfp(semi, trait_types=trait_types)))
 
     @staticmethod
-    def catchphrase(token_id, phrase):
+    async def catchphrase(token_id, phrase):
         semi = SuperFactory.get(token_id)
-        imagetools.catchphrase(semi, SuperMeta.trait_types_nobg, phrase).save(semi.catchphrase)
-        return semi
+        img = imagetools.catchphrase(semi, SuperMeta.trait_types_nobg, phrase)
+        return (semi, imagetools.to_png(img))
 
     @staticmethod
-    def vs(token_id, token_id2, fight_round=None):
+    async def vs(token_id, token_id2, fight_round=None):
         semi = SuperFactory.get(token_id)
         semi_opponent = SuperFactory.get(token_id2)
-        imagetools.vs(semi, semi_opponent, SuperMeta.trait_types_nobg, fight_round).save(semi.vs)
-        return (semi, semi_opponent)
+        img = imagetools.vs(semi, semi_opponent, SuperMeta.trait_types_nobg, fight_round)
+        return (semi, semi_opponent, imagetools.to_png(img))
 
     @staticmethod
     async def vs_gif(token_id=None):
         if token_id is not None:
             semi = SuperFactory.get(token_id)
             opps = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
-            return imagetools.gifio([imagetools.vs(semi, opp, SuperMeta.trait_types_nobg) for opp in opps])
+            frames = [imagetools.vs(semi, opp, SuperMeta.trait_types_nobg) for opp in opps]
+            return imagetools.gifio(frames)
         else:
             opps1 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
             opps2 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
-            return imagetools.gifio([imagetools.vs(opps[0], opps[1], SuperMeta.trait_types_nobg) for opps in list(zip(opps1, opps2))])
+            frames = [imagetools.vs(opps[0], opps[1], SuperMeta.trait_types_nobg) for opps in list(zip(opps1, opps2))]
+            return imagetools.gifio(frames)
 
 #
 # CLI

@@ -195,8 +195,8 @@ async def vs(ctx, *args):
 	else:
 		return
 	try:
-		semi1, semi2 = SuperFactory.vs(token_id, token_id2, fight_round)
-		await DiscordUtils.embed_image(ctx, "{} vs. {}".format(semi1.name, semi2.name), semi1.vs, "semi.png")
+		semi1, semi2, image = await SuperFactory.vs(token_id, token_id2, fight_round)
+		await DiscordUtils.embed_image(ctx, "{} vs. {}".format(semi1.name, semi2.name), image, "semi.png")
 	except Exception as e:
 		logger.error(e.message)
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
@@ -218,8 +218,8 @@ async def catchphrase(ctx, *, msg):
 		words = msg.split()
 		has_token_id = words[0].isnumeric()
 		token_id = words[0] if has_token_id else random.randint(0, 5554)
-		semi = SuperFactory.catchphrase(token_id, " ".join(words[1 if has_token_id else 0:]))
-		await DiscordUtils.embed_image(ctx, semi.name, semi.catchphrase, "semi.png", url=semi.opensea_url)	
+		semi, image = await SuperFactory.catchphrase(token_id, " ".join(words[1 if has_token_id else 0:]))
+		await DiscordUtils.embed_image(ctx, semi.name, image, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
