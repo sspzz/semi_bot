@@ -16,6 +16,7 @@ A simple Discord Bot which will, among other things, download and display artwor
 - `!thead` - Just the SemiSuper's head on transparent background
 - `!say` - Create catchprases for your SemiSuper
 - `!vs` - Pitch SemiSupers into battle
+- `!vsg` - Animated battles
 
 ## 📸 Examples
 
@@ -39,6 +40,7 @@ Onece running, the exposed endpoints are:
 
 - `http://127.0.0.1:5000/semi?tokenId=123`
 - `http://127.0.0.1:5000/pfp?tokenId=123`
+- `http://127.0.0.1:5000/pfpc?tokenId=123&traits=head,torso,background`
 - `http://127.0.0.1:5000/tpfp?tokenId=123`
 - `http://127.0.0.1:5000/head?tokenId=123`
 - `http://127.0.0.1:5000/thead?tokenId=123`
@@ -46,4 +48,5 @@ Onece running, the exposed endpoints are:
 - `http://127.0.0.1:5000/gn?tokenId=123`
 - `http://127.0.0.1:5000/say?tokenId=123&quote=Semi%20hilaroius%20catchphrase`
 - `http://127.0.0.1:5000/vs?tokenId=123&tokenId2=321`
+- - `http://127.0.0.1:5000/vsg?tokenId=123`
 
