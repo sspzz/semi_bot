@@ -264,7 +264,6 @@ class SuperMeta:
                 print("Done")
             return semis
 
-
 class SemiSuper(object):
     def __init__(self, token_id, artwork_root, meta):
         self.token_id = token_id
@@ -328,6 +327,8 @@ class SemiSuper(object):
 
 class SuperFactory:
     semis_meta = SuperMeta.load()
+    semis_meta_ids_villains = [i for i,s in enumerate(semis_meta) if "Villain" in s.name]
+    semis_meta_ids_heroes = [i for i,s in enumerate(semis_meta) if "Hero" in s.name]
 
     @staticmethod
     def get(token_id, cache=True):
@@ -375,6 +376,14 @@ class SuperFactory:
         return semi
 
     @staticmethod
+    def get_heroes(num):
+        return [SuperFactory.get(SuperFactory.semis_meta_ids_heroes[i]) for i in random.sample(range(0, len(SuperFactory.semis_meta_ids_heroes)), num)]
+
+    @staticmethod
+    def get_villains(num):
+        return [SuperFactory.get(SuperFactory.semis_meta_ids_villains[i]) for i in random.sample(range(0, len(SuperFactory.semis_meta_ids_villains)), num)]
+
+    @staticmethod
     async def pfp_custom(token_id, trait_types):
         semi = SuperFactory.get(token_id)
         return (semi, imagetools.to_png(imagetools.pfp(semi, trait_types=trait_types)))
@@ -400,10 +409,12 @@ class SuperFactory:
             frames = [imagetools.vs(semi, opp, SuperMeta.trait_types_nobg) for opp in opps]
             return imagetools.gifio(frames)
         else:
-            opps1 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
-            opps2 = [SuperFactory.get(i) for i in random.sample(range(0, 5554), 10)]
+            opps1 = SuperFactory.get_heroes(10)
+            opps2 = SuperFactory.get_villains(10)
             frames = [imagetools.vs(opps[0], opps[1], SuperMeta.trait_types_nobg) for opps in list(zip(opps1, opps2))]
             return imagetools.gifio(frames)
+
+
 
 #
 # CLI
@@ -411,9 +422,6 @@ class SuperFactory:
 async def gen(token_ids):
     for token_id in token_ids:
         semi = SuperFactory.get(token_id, cache=False)
-        SuperFactory.catchphrase(token_id, "This is not a test of the emergency broadcasting system, this is the real deal!")
-        SuperFactory.pfp_custom(token_id, trait_types=["head", "torso"])
-        SuperFactory.vs(token_id, random.randint(0, 5554))
 
 async def main(argv):
     if len(argv) == 0:
@@ -428,4 +436,3 @@ if __name__ == "__main__":
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     result = loop.run_until_complete(main(sys.argv[1:]))
-

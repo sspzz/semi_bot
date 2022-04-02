@@ -88,15 +88,21 @@ async def stats(ctx, token_id):
 @bot.command(name="pfp", aliases=["pic"])
 async def pic(ctx, *args):
 	logger.info("PFP")
+	traits = None
 	if len(args) == 0:
 		token_id = random.randint(0, 5554)
 	elif len(args) == 1:
 		token_id = args[0]
 	else:
-		return
+		token_id = args[0]
+		traits = args[1:]
 	try:
-		semi = SuperFactory.get(token_id)
-		await DiscordUtils.embed_image(ctx, semi.name, semi.pfp, "semi.png", url=semi.opensea_url)	
+		if traits is None:
+			semi = SuperFactory.get(token_id)
+			await DiscordUtils.embed_image(ctx, semi.name, semi.pfp, "semi.png", url=semi.opensea_url)
+		else:
+			semi, pfp = await SuperFactory.pfp_custom(token_id, traits)
+			await DiscordUtils.embed_image(ctx, semi.name, pfp, "semi.png", url=semi.opensea_url)
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
