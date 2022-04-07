@@ -33,11 +33,12 @@ class DiscordUtils:
 		await ctx.send(file=file, embed=embed)
 
 	@staticmethod
-	async def embed_fields(ctx, title, fields, inline=True, thumbnail=None, url=None, image=None):
+	async def embed_fields(ctx, title, fields, description=None, inline=True, thumbnail=None, url=None, image=None):
 		file = None
 		embed = discord.Embed(title=title)
 		if thumbnail is not None:
-			embed.set_thumbnail(url=thumbnail)
+			file = discord.File(thumbnail, filename="semi.png")
+			embed.set_thumbnail(url="attachment://semi.png")
 		for field in fields:
 			embed.add_field(name=field[0], value=field[1], inline=inline)
 		if url is not None:
@@ -45,6 +46,8 @@ class DiscordUtils:
 		if image is not None:
 			file = discord.File(image, filename="semi.png")
 			embed.set_image(url="attachment://semi.png")
+		if description is not None:
+			embed.description = description
 		await ctx.send(file=file, embed=embed)
 
 
@@ -228,6 +231,61 @@ async def catchphrase(ctx, *, msg):
 		await DiscordUtils.embed_image(ctx, semi.name, image, "semi.png", url=semi.opensea_url)	
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
+
+#
+# Fight Night
+#
+
+@bot.command(name="fight")
+async def fight(ctx, token_id, token_id2):
+	logger.info("FIGHT")
+
+	class Fighter(object):
+		def __init__(self, semi):
+			self.semi = semi
+			self.health = 30
+			self.multiplier = semi.damage_multiplier()
+
+	semi1, semi2, image = await SuperFactory.vs(token_id, token_id2)#, fight_round)
+	player1 = Fighter(semi1)
+	player2 = Fighter(semi2)
+	p1_turn = random.randint(0, 1) == 1
+	fight_round = 1
+	title = "{} vs. {}".format(semi1.name, semi2.name)
+	desc = "The battle is about to begin!\n{} gets first strike!".format(player1.semi.name if p1_turn else player2.semi.name)
+	await DiscordUtils.embed_image(ctx, title, image, "semi.png", description=desc)
+	
+	while True:
+		roll = random.randint(1, 6)
+		attacker = player1 if p1_turn else player2
+		defender = player2 if p1_turn else player1
+		damage = attacker.multiplier * roll
+		defender.health -= damage
+
+		title = "Round {}!".format(fight_round)
+		fight_moves = [
+			"performs semi-savage kung-fu",
+			"exhibits decent boxing skills",
+			"lands a moderately powerful punch",
+			"does some ferocious tickling"
+		]
+		desc = "{} {}, and does {} damage!".format(attacker.semi.name, random.choice(fight_moves), damage)
+		fields = [("Roll", "{}".format(roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(damage))]
+		await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small)
+		
+		if defender.health <= 0:
+			rounds_desc = [
+				"semi-gruelling and mildy verocious",
+				"somewhat engaging and exciting",
+				"mostly cute and partly entertaining",
+				"moderately vicious and possibly funny"
+			]
+			desc = "After {} {} rounds, {} WINS with {} remaining health!".format(fight_round, random.choice(rounds_desc), attacker.semi.name, attacker.health)
+			await DiscordUtils.embed_image(ctx, "{} WINS!".format(attacker.semi.name), attacker.semi.pfp, "semi.png", description=desc, url=attacker.semi.opensea_url)
+			break
+		
+		p1_turn = not p1_turn
+		fight_round += 1
 
 #
 # Run bot

@@ -279,6 +279,19 @@ class SemiSuper(object):
         except:
             return None
 
+    def damage_multiplier(self) -> float:
+        # - <5% traits will add .1 multiplyer
+        # - <4% traits will add . 125 multiplyer
+        # - <3% traits will add .15 multiplyer
+        # - <2% traits will add .175 multiplyer
+        # - <1% traits will add .2 multiplyer
+        m5 = len(list(filter(lambda t: t.rarity <= 0.5 and t.rarity > 0.4, self.meta.attributes))) * 0.1
+        m4 = len(list(filter(lambda t: t.rarity <= 0.4 and t.rarity > 0.3, self.meta.attributes))) * 0.125
+        m3 = len(list(filter(lambda t: t.rarity <= 0.3 and t.rarity > 0.2, self.meta.attributes))) * 0.15
+        m2 = len(list(filter(lambda t: t.rarity <= 0.2 and t.rarity > 0.1, self.meta.attributes))) * 0.175
+        m1 = len(list(filter(lambda t: t.rarity <= 0.1, self.meta.attributes))) * 0.2
+        return m5 + m4 + m3 + m2 + m1
+
     @property
     def opensea_url(self):
         return "https://opensea.io/assets/0xac87febdf7ef7d5f930497cafab9c25d35b932f9/{}".format(self.token_id)
@@ -290,6 +303,10 @@ class SemiSuper(object):
     @property
     def pfp(self):
         return "{}/{}.png".format(self.path, self.token_id)
+    
+    @property
+    def pfp_small(self):
+        return "{}/{}s.png".format(self.path, self.token_id)
     
     @property
     def pfp_nobg(self):
@@ -357,6 +374,9 @@ class SuperFactory:
 
         if not cache or not os.path.isfile(semi.pfp):
             imagetools.pfp(semi, trait_types=SuperMeta.trait_types).save(semi.pfp)
+
+        if not cache or not os.path.isfile(semi.pfp_small):
+            imagetools.pfp(semi, trait_types=SuperMeta.trait_types, size=(100,100)).save(semi.pfp_small)
 
         if not cache or not os.path.isfile(semi.pfp_nobg):
             imagetools.pfp(semi, trait_types=SuperMeta.trait_types_nobg).save(semi.pfp_nobg)

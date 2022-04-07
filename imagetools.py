@@ -1,6 +1,6 @@
 import os
 import random
-from PIL import Image, ImageSequence, ImageEnhance, ImageDraw, ImageFont, ImageDraw
+from PIL import Image, ImageSequence, ImageEnhance, ImageDraw, ImageFont
 from itertools import product
 from io import BytesIO
 
@@ -217,12 +217,14 @@ def to_png(img):
 
 ###########################################################################################
 
-def pfp(semi, trait_types, xy=(0,0)):
+def pfp(semi, trait_types, xy=(0,0), size=None):
     bg = "background" in trait_types
     traits = semi.get_traits_assets(include_trait_types=trait_types)
     root = Image.open(traits[0]).convert("RGBA") if bg else Image.new("RGBA", (1080, 1080), (255,255,255,0))
     for layer in traits[0 if not bg else 1:]:
         root = Image.alpha_composite(root, Image.open(layer).convert("RGBA"))
+    if isinstance(size, tuple):
+        root = root.resize(size)
     return root
 
 def bg_wide(semi):
