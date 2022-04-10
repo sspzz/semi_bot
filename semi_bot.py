@@ -11,17 +11,20 @@ import random
 # Utilities related to Discord
 class DiscordUtils:
 	@staticmethod
-	async def embed(ctx, title, description, thumbnail=None, image=None):
-		embed = discord.Embed(title=title, description=description)
+	async def embed(ctx, title, description, thumbnail=None, image=None, color=discord.Embed.Empty):
+		file = None
+		embed = discord.Embed(title=title, description=description, color=color)
 		if thumbnail is not None:
-			embed.set_thumbnail(url=thumbnail)
+			file = discord.File(thumbnail, filename="semi.png")
+			embed.set_thumbnail(url="attachment://semi.png")
 		if image is not None:
-			embed.set_image(url=image)
-		await ctx.send(embed=embed)
+			file = discord.File(image, filename="semi.png")
+			embed.set_image(url="attachment://semi.png")
+		await ctx.send(file=file, embed=embed)
 
 	@staticmethod
-	async def embed_image(ctx, title, file, filename, description=None, footer=None, url=None):
-		embed = discord.Embed(title=title)
+	async def embed_image(ctx, title, file, filename, description=None, footer=None, url=None, color=discord.Embed.Empty):
+		embed = discord.Embed(title=title, color=color)
 		file = discord.File(file, filename=filename)
 		embed.set_image(url="attachment://{}".format(filename))
 		if description is not None:
@@ -33,9 +36,9 @@ class DiscordUtils:
 		await ctx.send(file=file, embed=embed)
 
 	@staticmethod
-	async def embed_fields(ctx, title, fields, description=None, inline=True, thumbnail=None, url=None, image=None):
+	async def embed_fields(ctx, title, fields, description=None, inline=True, thumbnail=None, url=None, image=None, color=discord.Embed.Empty):
 		file = None
-		embed = discord.Embed(title=title)
+		embed = discord.Embed(title=title, color=color)
 		if thumbnail is not None:
 			file = discord.File(thumbnail, filename="semi.png")
 			embed.set_thumbnail(url="attachment://semi.png")
@@ -50,6 +53,58 @@ class DiscordUtils:
 			embed.description = description
 		await ctx.send(file=file, embed=embed)
 
+	@staticmethod
+	def bg_color(semi):
+		bg = semi.meta_trait("background").lower()
+		try:
+			if "purple" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_purple()
+				else:
+					return discord.Colour.purple()
+			elif "pink" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_purple()
+				else:
+					return discord.Colour.purple()
+			elif "magenta" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_magenta()
+				else:
+					return discord.Colour.magenta()
+			elif "red" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_red()
+				else:
+					return discord.Colour.red()
+			elif "teal" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_teal()
+				else:
+					return discord.Colour.teal()
+			elif "blue" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_blue()
+				else:
+					return discord.Colour.blue()
+			elif "orange" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_orange()
+				else:
+					return discord.Colour.orange()
+			elif "yellow" in bg:
+				if semi.is_villain:
+					return discord.Colour.dark_orange()
+				else:
+					return discord.Colour.orange()
+			elif "light gray" in bg:
+				return discord.Colour.light_grey()
+			elif "dark gray" in bg:
+				return discord.Colour.dark_grey()
+		except:
+			return discord.Colour.light_grey()
+
+
 
 #
 # Setup
@@ -63,14 +118,15 @@ logging.basicConfig(filename='semi_bot.log',
                     level=logging.INFO)
 logger = logging.getLogger('semi_bot')
 
-def is_admin():
-	def predicate(ctx):
-		return ctx.message.author.id in config.discord_admins
-	return commands.check(predicate)
 
 def can_be_used_in(channel_id):
 	def predicate(ctx):
 		return ctx.message.channel.id == channel_id
+	return commands.check(predicate)
+
+def has_role(role_id):
+	def predicate(ctx):
+		return discord.utils.find(lambda r: r.id == role_id, ctx.message.guild.roles) in ctx.message.author.roles
 	return commands.check(predicate)
 
 #
@@ -84,7 +140,7 @@ async def stats(ctx, token_id):
 		traits = sorted(semi.meta.attributes, key=lambda t: t.trait_type)
 		def field_from_trait(trait):
 			return ("{} {}".format(trait.rarity_category, trait.trait_type.title()), "{} ({}%)".format(trait.value, round(trait.rarity*100, 2)))
-		await DiscordUtils.embed_fields(ctx, semi.name, list(map(lambda t: field_from_trait(t), traits)), image=semi.pfp, url=semi.opensea_url)
+		await DiscordUtils.embed_fields(ctx, semi.name, list(map(lambda t: field_from_trait(t), traits)), thumbnail=semi.pfp, url=semi.opensea_url)
 	except:
 		await ctx.send("Could not load SemiSuper {}".format(token_id))
 
@@ -236,56 +292,115 @@ async def catchphrase(ctx, *, msg):
 # Fight Night
 #
 
+@has_role(930936361744212030)
+@can_be_used_in(961901966630457384)
+@bot.command(name="multi")
+async def fight(ctx, *args):
+	if len(args) == 0:
+		token_id = random.randint(0, 5554)
+		token_id2 = random.randint(0, 5554)
+	elif len(args) == 1:
+		token_id = args[0]
+		token_id2 = random.randint(0, 5554)
+	elif len(args) >= 2:
+		token_id = args[0]
+		token_id2 = args[1]	
+	semi1, semi2, image = await SuperFactory.vs(token_id, token_id2)
+	multi = int(args[2]) if len(args) >= 3 else 15
+	await DiscordUtils.embed_fields(ctx, "Damage multiplier (traits cap at {})".format(multi), [(semi1.name, "{}".format(semi1.damage_multiplier(traits_cap=multi))), (semi2.name, "{}".format(semi2.damage_multiplier(traits_cap=multi)))], image=image)
+
+import asyncio 
+
+@has_role(930936361744212030)
+@can_be_used_in(961901966630457384)
 @bot.command(name="fight")
 async def fight(ctx, token_id, token_id2):
 	logger.info("FIGHT")
 
-	class Fighter(object):
+	class Player(object):
 		def __init__(self, semi):
 			self.semi = semi
-			self.health = 30
+			self.health = 50
 			self.multiplier = semi.damage_multiplier()
 
-	semi1, semi2, image = await SuperFactory.vs(token_id, token_id2)#, fight_round)
-	player1 = Fighter(semi1)
-	player2 = Fighter(semi2)
-	p1_turn = random.randint(0, 1) == 1
-	fight_round = 1
-	title = "{} vs. {}".format(semi1.name, semi2.name)
-	desc = "The battle is about to begin!\n{} gets first strike!".format(player1.semi.name if p1_turn else player2.semi.name)
-	await DiscordUtils.embed_image(ctx, title, image, "semi.png", description=desc)
-	
-	while True:
-		roll = random.randint(1, 6)
-		attacker = player1 if p1_turn else player2
-		defender = player2 if p1_turn else player1
-		damage = attacker.multiplier * roll
-		defender.health -= damage
+	semi1, semi2, image_vs = await SuperFactory.vs(token_id, token_id2)#, fight_round)
+	player1 = Player(semi1)
+	player2 = Player(semi2)
+	round_number = 1
 
-		title = "Round {}!".format(fight_round)
-		fight_moves = [
-			"performs semi-savage kung-fu",
-			"exhibits decent boxing skills",
-			"lands a moderately powerful punch",
-			"does some ferocious tickling"
-		]
-		desc = "{} {}, and does {} damage!".format(attacker.semi.name, random.choice(fight_moves), damage)
-		fields = [("Roll", "{}".format(roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(damage))]
-		await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small)
-		
-		if defender.health <= 0:
-			rounds_desc = [
-				"semi-gruelling and mildy verocious",
-				"somewhat engaging and exciting",
-				"mostly cute and partly entertaining",
-				"moderately vicious and possibly funny"
+	# Display fight start	
+	title = "{} vs. {}".format(semi1.name, semi2.name)
+	desc = "The contestants are nearly ready, and the battle is about to begin!"
+	await DiscordUtils.embed_image(ctx, title, image_vs, "semi.png", description=desc, color=discord.Color.red())
+
+	# await asyncio.sleep(5)
+
+	# Game rounds loop
+	while True:
+		# Coin toss on who goes first this round
+		p1_first = random.SystemRandom().randint(0, 1) == 1
+		round_order = [player1, player2] if p1_first else [player2, player1]
+
+		# Display round start
+		title = "ROUND {}, FIGHT!".format(round_number)
+		desc = "The round is about to begin!\n\nAfter a coin toss **{} gets first strike**!".format(round_order[0].semi.name)
+		await DiscordUtils.embed(ctx, title, desc, color=discord.Color.red(), thumbnail="resources/assets/fight.png")
+
+		# await asyncio.sleep(5)
+
+		# Performs attack, returns True if attack leads to game over
+		async def attack(attacker, defender) -> bool:
+			# Roll dice and deal damage based on multiplier
+			roll = random.SystemRandom().randint(1, 6)
+			damage = round(attacker.multiplier * roll, 3)
+			defender.health = round(defender.health - damage, 3)
+			game_over = defender.health <= 0
+
+			# Display attack
+			title = "{} attacks!".format(attacker.semi.name)
+			fight_moves = [
+				"performs semi-savage kung-fu",
+				"exhibits decent boxing skills",
+				"lands a moderately powerful punch",
+				"does some ferocious tickling"
 			]
-			desc = "After {} {} rounds, {} WINS with {} remaining health!".format(fight_round, random.choice(rounds_desc), attacker.semi.name, attacker.health)
-			await DiscordUtils.embed_image(ctx, "{} WINS!".format(attacker.semi.name), attacker.semi.pfp, "semi.png", description=desc, url=attacker.semi.opensea_url)
-			break
+			desc = "{} **rolls a {}** and {}, **doing {} damage**!".format(attacker.semi.name, roll, random.choice(fight_moves), damage)
+			fields = [("Roll", "{}".format(roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(damage))]
+			color = DiscordUtils.bg_color(attacker.semi)
+			await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small, color=color)
+
+			# await asyncio.sleep(3)
+
+			# Display winner if game over
+			if game_over:
+				rounds_desc = [
+					"semi-gruelling and mildy verocious",
+					"somewhat engaging and exciting",
+					"mostly cute and partly entertaining",
+					"moderately vicious and possibly funny"
+				]
+				desc = "After {} {} rounds, **{} WINS** with {} health remaining!\n\nCONGRATULATIONS!".format(round_number, random.choice(rounds_desc), attacker.semi.name, attacker.health)
+				await DiscordUtils.embed(ctx, 
+										"FIGHT OVER!",
+										desc,
+										image=attacker.semi.pfp,
+										color=discord.Colour.red())
+			return game_over
 		
-		p1_turn = not p1_turn
-		fight_round += 1
+		game_over = await attack(round_order[0], round_order[1])
+		if not game_over:
+			# await asyncio.sleep(5)
+			game_over = await attack(round_order[1], round_order[0])		
+		if game_over:
+			break
+		else:
+			# Display round summary
+			await DiscordUtils.embed_fields(ctx, 
+											"ROUND {} OVER!".format(round_number), 
+											list(map(lambda p: (p.semi.name, "{} health remaining".format(p.health)), round_order)),
+											description="The round is over, both fighters are still in the game!",
+											color=discord.Color.red())
+			round_number += 1
 
 #
 # Run bot

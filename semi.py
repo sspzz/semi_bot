@@ -279,18 +279,29 @@ class SemiSuper(object):
         except:
             return None
 
-    def damage_multiplier(self) -> float:
-        # - <5% traits will add .1 multiplyer
-        # - <4% traits will add . 125 multiplyer
-        # - <3% traits will add .15 multiplyer
-        # - <2% traits will add .175 multiplyer
-        # - <1% traits will add .2 multiplyer
-        m5 = len(list(filter(lambda t: t.rarity <= 0.5 and t.rarity > 0.4, self.meta.attributes))) * 0.1
-        m4 = len(list(filter(lambda t: t.rarity <= 0.4 and t.rarity > 0.3, self.meta.attributes))) * 0.125
-        m3 = len(list(filter(lambda t: t.rarity <= 0.3 and t.rarity > 0.2, self.meta.attributes))) * 0.15
-        m2 = len(list(filter(lambda t: t.rarity <= 0.2 and t.rarity > 0.1, self.meta.attributes))) * 0.175
-        m1 = len(list(filter(lambda t: t.rarity <= 0.1, self.meta.attributes))) * 0.2
-        return m5 + m4 + m3 + m2 + m1
+    # - <5% traits will add .1 multiplyer
+    # - <4% traits will add .125 multiplyer
+    # - <3% traits will add .15 multiplyer
+    # - <2% traits will add .175 multiplyer
+    # - <1% traits will add .2 multiplyer
+    def damage_multiplier(self, traits_cap=15) -> float:
+        # TODO: try choosing traits_cap random traits?
+        multiplier = 1.0
+        traits_sorted = sorted(self.meta.attributes, key=lambda t: t.rarity)
+        for i, t in enumerate(traits_sorted):
+            if t.rarity < 0.05 and t.rarity >= 0.04:
+                multiplier += 0.1
+            elif t.rarity < 0.04 and t.rarity >= 0.03:
+                multiplier += 0.125
+            elif t.rarity < 0.03 and t.rarity >= 0.02:
+                multiplier += 0.15
+            elif t.rarity < 0.02 and t.rarity >= 0.01:
+                multiplier += 0.175
+            elif t.rarity < 0.01:
+                multiplier += 0.2
+            if i == traits_cap-1:
+                break
+        return round(multiplier, 3)
 
     @property
     def opensea_url(self):
