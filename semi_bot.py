@@ -7,6 +7,8 @@ import logging
 import logging.config
 from random import randrange
 import random
+import asyncio 
+
 
 # Utilities related to Discord
 class DiscordUtils:
@@ -292,8 +294,11 @@ async def catchphrase(ctx, *, msg):
 # Fight Night
 #
 
-@has_role(930936361744212030)
-@can_be_used_in(961901966630457384)
+mod_role_id = 930936361744212030
+fight_channel_id = 961901966630457384
+
+@has_role(mod_role_id)
+@can_be_used_in(fight_channel_id)
 @bot.command(name="multi")
 async def fight(ctx, *args):
 	if len(args) == 0:
@@ -309,35 +314,90 @@ async def fight(ctx, *args):
 	multi = int(args[2]) if len(args) >= 3 else 15
 	await DiscordUtils.embed_fields(ctx, "Damage multiplier (traits cap at {})".format(multi), [(semi1.name, "{}".format(semi1.damage_multiplier(traits_cap=multi))), (semi2.name, "{}".format(semi2.damage_multiplier(traits_cap=multi)))], image=image)
 
-import asyncio 
-
-@has_role(930936361744212030)
-@can_be_used_in(961901966630457384)
+@has_role(mod_role_id)
+@can_be_used_in(fight_channel_id)
 @bot.command(name="fight")
 async def fight(ctx, token_id, token_id2):
 	logger.info("FIGHT")
 
 	class Player(object):
-		def __init__(self, semi):
+		def __init__(self, semi, advantage=0.0):
 			self.semi = semi
 			self.health = 50
-			self.multiplier = semi.damage_multiplier()
+			self.multiplier = semi.damage_multiplier(traits_cap=6) + advantage
+			self.last_damage = 0
+			self.last_roll = 0
+			self.advantage = advantage
 
+		def deal_damage(self):
+			self.last_roll = random.SystemRandom().randint(1, 6)
+			self.last_damage = round(self.multiplier * self.last_roll, 3)
+
+		def take_damage(self, dmg):
+			self.health = round(self.health - dmg, 3)
+
+	# Performs attack, returns winner if attack leads to game over
+	def perform_attack(attacker, defender):
+		attacker.deal_damage()
+		defender.take_damage(attacker.last_damage)
+		return attacker if defender.health <= 0 else None
+
+	# Display info on an attach
+	async def display_attack(attacker):
+		title = "{} attacks!".format(attacker.semi.name)
+		fight_moves = [
+			"performs semi-savage kung-fu",
+			"exhibits decent boxing skills",
+			"lands a moderately powerful punch",
+			"does some ferocious tickling"
+		]
+		desc = "{} **rolls a {}** and {}, **doing {} damage**!".format(attacker.semi.name, attacker.last_roll, random.choice(fight_moves), attacker.last_damage)
+		fields = [("Roll", "{}".format(attacker.last_roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(attacker.last_damage))]
+		await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small, color=DiscordUtils.bg_color(attacker.semi))
+
+	# Display info on game over and winner
+	async def display_game_over(winner):
+		rounds_desc = [
+			"semi-gruelling and mildy verocious",
+			"somewhat engaging and exciting",
+			"mostly cute and partly entertaining",
+			"moderately vicious and possibly funny"
+		]
+		desc = "After {} {} rounds, **{} WINS** with {} health remaining!\n\n**CONGRATULATIONS**!".format(round_number, random.choice(rounds_desc), winner.semi.name, winner.health)
+		await DiscordUtils.embed(ctx, "FIGHT OVER!", desc,
+								image=winner.semi.pfp,
+								color=discord.Colour.red())
+
+	# Display round summary
+	async def display_round_summary(player1, player2):
+		round_winner = None if player1.last_damage == player2.last_damage else (player1 if player1.last_damage > player2.last_damage else player2)
+		game_leader = None if player1.health == player2.health else (player1 if player1.health > player2.health else player2)
+		desc = "The round is over, both fighters are still in the game!\n"
+		desc += "- **{}** had the **better round**!\n".format(round_winner.semi.name) if round_winner is not None else "This round **was a tie**!"
+		desc += "- **{}** is **in the lead**!\n\n".format(game_leader.semi.name) if game_leader is not None else "The contestants are **dead even**!"
+		fields = list(map(lambda p: (p.semi.name, "{} health remaining".format(p.health)), [player1, player2]))
+		await DiscordUtils.embed_fields(ctx, 
+										"ROUND {} OVER!".format(round_number), 
+										fields,
+										description=desc,
+										color=discord.Color.red())
+
+	# Setup game
 	semi1, semi2, image_vs = await SuperFactory.vs(token_id, token_id2)#, fight_round)
-	player1 = Player(semi1)
+	home_advantage = 0.25
+	player1 = Player(semi1, advantage=home_advantage)
 	player2 = Player(semi2)
 	round_number = 1
 
 	# Display fight start	
 	title = "{} vs. {}".format(semi1.name, semi2.name)
-	desc = "The contestants are nearly ready, and the battle is about to begin!"
+	desc = "The contestants are nearly ready, and the battle is about to begin!\n\n"
+	desc += "**{} has home advantage** and gets +{} to their multiplier!".format(player1.semi.name, home_advantage)
 	await DiscordUtils.embed_image(ctx, title, image_vs, "semi.png", description=desc, color=discord.Color.red())
 
-	# await asyncio.sleep(5)
-
-	# Game rounds loop
+	# Game loop
 	while True:
-		# Coin toss on who goes first this round
+		# Coin toss on first strike
 		p1_first = random.SystemRandom().randint(0, 1) == 1
 		round_order = [player1, player2] if p1_first else [player2, player1]
 
@@ -346,61 +406,18 @@ async def fight(ctx, token_id, token_id2):
 		desc = "The round is about to begin!\n\nAfter a coin toss **{} gets first strike**!".format(round_order[0].semi.name)
 		await DiscordUtils.embed(ctx, title, desc, color=discord.Color.red(), thumbnail="resources/assets/fight.png")
 
-		# await asyncio.sleep(5)
-
-		# Performs attack, returns True if attack leads to game over
-		async def attack(attacker, defender) -> bool:
-			# Roll dice and deal damage based on multiplier
-			roll = random.SystemRandom().randint(1, 6)
-			damage = round(attacker.multiplier * roll, 3)
-			defender.health = round(defender.health - damage, 3)
-			game_over = defender.health <= 0
-
-			# Display attack
-			title = "{} attacks!".format(attacker.semi.name)
-			fight_moves = [
-				"performs semi-savage kung-fu",
-				"exhibits decent boxing skills",
-				"lands a moderately powerful punch",
-				"does some ferocious tickling"
-			]
-			desc = "{} **rolls a {}** and {}, **doing {} damage**!".format(attacker.semi.name, roll, random.choice(fight_moves), damage)
-			fields = [("Roll", "{}".format(roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(damage))]
-			color = DiscordUtils.bg_color(attacker.semi)
-			await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small, color=color)
-
-			# await asyncio.sleep(3)
-
-			# Display winner if game over
-			if game_over:
-				rounds_desc = [
-					"semi-gruelling and mildy verocious",
-					"somewhat engaging and exciting",
-					"mostly cute and partly entertaining",
-					"moderately vicious and possibly funny"
-				]
-				desc = "After {} {} rounds, **{} WINS** with {} health remaining!\n\nCONGRATULATIONS!".format(round_number, random.choice(rounds_desc), attacker.semi.name, attacker.health)
-				await DiscordUtils.embed(ctx, 
-										"FIGHT OVER!",
-										desc,
-										image=attacker.semi.pfp,
-										color=discord.Colour.red())
-			return game_over
-		
-		game_over = await attack(round_order[0], round_order[1])
-		if not game_over:
-			# await asyncio.sleep(5)
-			game_over = await attack(round_order[1], round_order[0])		
-		if game_over:
-			break
-		else:
-			# Display round summary
-			await DiscordUtils.embed_fields(ctx, 
-											"ROUND {} OVER!".format(round_number), 
-											list(map(lambda p: (p.semi.name, "{} health remaining".format(p.health)), round_order)),
-											description="The round is over, both fighters are still in the game!",
-											color=discord.Color.red())
+		# Execute round
+		winner = perform_attack(round_order[0], round_order[1])
+		await display_attack(round_order[0])
+		if not winner:
+			winner = perform_attack(round_order[1], round_order[0])
+			await display_attack(round_order[1])
+		if not winner:
+			await display_round_summary(player1, player2)
 			round_number += 1
+		else:
+			await display_game_over(winner)
+			break
 
 #
 # Run bot
