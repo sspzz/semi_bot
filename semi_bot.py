@@ -327,46 +327,31 @@ async def fight(ctx, token_id, token_id2):
 			self.multiplier = semi.damage_multiplier(traits_cap=6) + advantage
 			self.last_damage = 0
 			self.last_roll = 0
-			self.advantage = advantage
 
-		def deal_damage(self):
+		def deal_damage(self, opponent):
 			self.last_roll = random.SystemRandom().randint(1, 6)
 			self.last_damage = round(self.multiplier * self.last_roll, 3)
+			opponent.health = round(opponent.health - self.last_damage, 3)
+			return self if opponent.health <= 0 else None
+	
+	class PlayerMoves(object):
+		def __init__(self):
+			self.moves = []
+			with open("resources/meta/fight_moves.csv", "r") as file:
+				for line in file:
+					self.moves.append(line.split(";"))
 
-		def take_damage(self, dmg):
-			self.health = round(self.health - dmg, 3)
-
-	# Performs attack, returns winner if attack leads to game over
-	def perform_attack(attacker, defender):
-		attacker.deal_damage()
-		defender.take_damage(attacker.last_damage)
-		return attacker if defender.health <= 0 else None
+		def random_move(self, roll):
+			return random.choice(self.moves[roll-1])
 
 	# Display info on an attach
-	async def display_attack(attacker):
+	async def display_attack(attacker, defender):
 		title = "{} attacks!".format(attacker.semi.name)
-		fight_moves = [
-			"performs semi-savage kung-fu",
-			"exhibits decent boxing skills",
-			"lands a moderately powerful punch",
-			"does some ferocious tickling"
-		]
-		desc = "{} **rolls a {}** and {}, **doing {} damage**!".format(attacker.semi.name, attacker.last_roll, random.choice(fight_moves), attacker.last_damage)
-		fields = [("Roll", "{}".format(attacker.last_roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "{}".format(attacker.last_damage))]
-		await DiscordUtils.embed_fields(ctx, title, fields, description=desc, thumbnail=attacker.semi.pfp_small, color=DiscordUtils.bg_color(attacker.semi))
-
-	# Display info on game over and winner
-	async def display_game_over(winner):
-		rounds_desc = [
-			"semi-gruelling and mildy verocious",
-			"somewhat engaging and exciting",
-			"mostly cute and partly entertaining",
-			"moderately vicious and possibly funny"
-		]
-		desc = "After {} {} rounds, **{} WINS** with {} health remaining!\n\n**CONGRATULATIONS**!".format(round_number, random.choice(rounds_desc), winner.semi.name, winner.health)
-		await DiscordUtils.embed(ctx, "FIGHT OVER!", desc,
-								image=winner.semi.pfp,
-								color=discord.Colour.red())
+		move = PlayerMoves().random_move(attacker.last_roll)
+		move = move.replace("X", attacker.semi.name)
+		move = move.replace("Y", defender.semi.name)
+		fields = [("Roll", "{}".format(attacker.last_roll)), ("Multiplier", "{}x".format(attacker.multiplier)), ("Damage", "**{}**".format(attacker.last_damage))]
+		await DiscordUtils.embed_fields(ctx, move, fields, thumbnail=attacker.semi.pfp_small, color=DiscordUtils.bg_color(attacker.semi))
 
 	# Display round summary
 	async def display_round_summary(player1, player2):
@@ -375,12 +360,25 @@ async def fight(ctx, token_id, token_id2):
 		desc = "The round is over, both fighters are still in the game!\n"
 		desc += "- **{}** had the **better round**!\n".format(round_winner.semi.name) if round_winner is not None else "This round **was a tie**!"
 		desc += "- **{}** is **in the lead**!\n\n".format(game_leader.semi.name) if game_leader is not None else "The contestants are **dead even**!"
-		fields = list(map(lambda p: (p.semi.name, "{} health remaining".format(p.health)), [player1, player2]))
+		fields = list(map(lambda p: (p.semi.name, "**{}** health remaining".format(p.health)), [player1, player2]))
 		await DiscordUtils.embed_fields(ctx, 
-										"ROUND {} OVER!".format(round_number), 
+										"ROUND {} OVER".format(round_number), 
 										fields,
 										description=desc,
 										color=discord.Color.red())
+
+	# Display info on game over and winner
+	async def display_game_over(winner):
+		rounds_desc = [
+			"semi-gruelling and mildy verocious",
+			"somewhat engaging and exciting",
+			"mostly cute and partly entertaining",
+			"moderately vicious and quite possibly funny"
+		]
+		desc = "After {} {} rounds, **{} WINS** with {} health remaining!\n\n**CONGRATULATIONS**!".format(round_number, random.choice(rounds_desc), winner.semi.name, winner.health)
+		await DiscordUtils.embed(ctx, "FIGHT OVER!", desc,
+								image=winner.semi.pfp,
+								color=discord.Colour.red())
 
 	# Setup game
 	semi1, semi2, image_vs = await SuperFactory.vs(token_id, token_id2)#, fight_round)
@@ -388,12 +386,14 @@ async def fight(ctx, token_id, token_id2):
 	player1 = Player(semi1, advantage=home_advantage)
 	player2 = Player(semi2)
 	round_number = 1
-
+	
 	# Display fight start	
-	title = "{} vs. {}".format(semi1.name, semi2.name)
+	title = "THE SEMISUPER SMASHTACULAR!\n{} vs. {}".format(semi1.name, semi2.name)
 	desc = "The contestants are nearly ready, and the battle is about to begin!\n\n"
-	desc += "**{} has home advantage** and gets +{} to their multiplier!".format(player1.semi.name, home_advantage)
+	desc += "**{}** has **home advantage** and gets +{} to their multiplier!".format(player1.semi.name, home_advantage)
 	await DiscordUtils.embed_image(ctx, title, image_vs, "semi.png", description=desc, color=discord.Color.red())
+
+	await asyncio.sleep(25)
 
 	# Game loop
 	while True:
@@ -402,22 +402,27 @@ async def fight(ctx, token_id, token_id2):
 		round_order = [player1, player2] if p1_first else [player2, player1]
 
 		# Display round start
-		title = "ROUND {}, FIGHT!".format(round_number)
-		desc = "The round is about to begin!\n\nAfter a coin toss **{} gets first strike**!".format(round_order[0].semi.name)
+		title = "ROUND {} - FIGHT!".format(round_number)
+		desc = "The round is about to start!\n\nAfter a coin toss **{} gets first strike**!".format(round_order[0].semi.name)
 		await DiscordUtils.embed(ctx, title, desc, color=discord.Color.red(), thumbnail="resources/assets/fight.png")
+		await asyncio.sleep(15)
 
 		# Execute round
-		winner = perform_attack(round_order[0], round_order[1])
-		await display_attack(round_order[0])
+		winner = round_order[0].deal_damage(round_order[1])
+		await display_attack(round_order[0], round_order[1])
+		await asyncio.sleep(15)
 		if not winner:
-			winner = perform_attack(round_order[1], round_order[0])
-			await display_attack(round_order[1])
+			winner = round_order[1].deal_damage(round_order[0])
+			await display_attack(round_order[1], round_order[0])
+			await asyncio.sleep(15)
 		if not winner:
 			await display_round_summary(player1, player2)
 			round_number += 1
+			await asyncio.sleep(30)
 		else:
 			await display_game_over(winner)
 			break
+
 
 #
 # Run bot
