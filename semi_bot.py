@@ -121,9 +121,9 @@ logging.basicConfig(filename='semi_bot.log',
 logger = logging.getLogger('semi_bot')
 
 
-def can_be_used_in(channel_id):
+def can_be_used_in(channel_ids):
 	def predicate(ctx):
-		return ctx.message.channel.id == channel_id
+		return ctx.message.channel.id in channel_ids
 	return commands.check(predicate)
 
 def has_role(role_id):
@@ -295,10 +295,10 @@ async def catchphrase(ctx, *, msg):
 #
 
 mod_role_id = 930936361744212030
-fight_channel_id = 961901966630457384
+fight_channel_ids = [961901966630457384, 963109815884841022]
 
 @has_role(mod_role_id)
-@can_be_used_in(fight_channel_id)
+@can_be_used_in(fight_channel_ids)
 @bot.command(name="multi")
 async def fight(ctx, *args):
 	if len(args) == 0:
@@ -315,7 +315,7 @@ async def fight(ctx, *args):
 	await DiscordUtils.embed_fields(ctx, "Damage multiplier (traits cap at {})".format(multi), [(semi1.name, "{}".format(semi1.damage_multiplier(traits_cap=multi))), (semi2.name, "{}".format(semi2.damage_multiplier(traits_cap=multi)))], image=image)
 
 @has_role(mod_role_id)
-@can_be_used_in(fight_channel_id)
+@can_be_used_in(fight_channel_ids)
 @bot.command(name="fight")
 async def fight(ctx, token_id, token_id2):
 	logger.info("FIGHT")
@@ -358,8 +358,8 @@ async def fight(ctx, token_id, token_id2):
 		round_winner = None if player1.last_damage == player2.last_damage else (player1 if player1.last_damage > player2.last_damage else player2)
 		game_leader = None if player1.health == player2.health else (player1 if player1.health > player2.health else player2)
 		desc = "The round is over, both fighters are still in the game!\n"
-		desc += "- **{}** had the **better round**!\n".format(round_winner.semi.name) if round_winner is not None else "This round **was a tie**!"
-		desc += "- **{}** is **in the lead**!\n\n".format(game_leader.semi.name) if game_leader is not None else "The contestants are **dead even**!"
+		desc += "- **{}** had the **better round**!\n".format(round_winner.semi.name) if round_winner is not None else "- This round **was a tie**!\n"
+		desc += "- **{}** is **in the lead**!\n\n".format(game_leader.semi.name) if game_leader is not None else "- The contestants are **dead even**!\n\n"
 		fields = list(map(lambda p: (p.semi.name, "**{}** health remaining".format(p.health)), [player1, player2]))
 		await DiscordUtils.embed_fields(ctx, 
 										"ROUND {} OVER".format(round_number), 
@@ -414,11 +414,11 @@ async def fight(ctx, token_id, token_id2):
 		if not winner:
 			winner = round_order[1].deal_damage(round_order[0])
 			await display_attack(round_order[1], round_order[0])
-			await asyncio.sleep(15)
+			await asyncio.sleep(5)
 		if not winner:
 			await display_round_summary(player1, player2)
 			round_number += 1
-			await asyncio.sleep(30)
+			await asyncio.sleep(15)
 		else:
 			await display_game_over(winner)
 			break
